@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Config locale utilisée pour les tests d'intégration contre un switch réel
+# (adresse IP, identifiants) : ne jamais committer.
+tests/local_switch.json
+tests/local_switch*.json
+.env
+
+*.log

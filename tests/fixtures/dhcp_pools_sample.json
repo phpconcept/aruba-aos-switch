@@ -1,0 +1,117 @@
+{
+    "dhcp_server_pool_element": [
+        {
+            "uri": "/dhcp-server/pools/VLAN-31",
+            "pool_name": "VLAN-31",
+            "network_ip": {
+                "version": "IAV_IP_V4",
+                "octets": "192.168.31.0"
+            },
+            "network_mask": {
+                "version": "IAV_IP_V4",
+                "octets": "255.255.255.0"
+            },
+            "default_routers": [
+                {
+                    "version": "IAV_IP_V4",
+                    "octets": "192.168.31.1"
+                }
+            ],
+            "dns_servers": [
+                {
+                    "version": "IAV_IP_V4",
+                    "octets": "8.8.8.8"
+                }
+            ],
+            "netbios_servers": [],
+            "lease_time": {
+                "days": 1,
+                "hours": 0,
+                "minutes": 0,
+                "infinite": false
+            },
+            "ip_range": [
+                {
+                    "ip_start": {
+                        "version": "IAV_IP_V4",
+                        "octets": "192.168.31.50"
+                    },
+                    "ip_end": {
+                        "version": "IAV_IP_V4",
+                        "octets": "192.168.31.100"
+                    }
+                }
+            ],
+            "options": []
+        },
+        {
+            "uri": "/dhcp-server/pools/VLAN-32",
+            "pool_name": "VLAN-32",
+            "network_ip": {
+                "version": "IAV_IP_V4",
+                "octets": "192.168.32.0"
+            },
+            "network_mask": {
+                "version": "IAV_IP_V4",
+                "octets": "255.255.255.0"
+            },
+            "default_routers": [
+                {
+                    "version": "IAV_IP_V4",
+                    "octets": "192.168.32.1"
+                },
+                {
+                    "version": "IAV_IP_V4",
+                    "octets": "192.168.32.2"
+                }
+            ],
+            "dns_servers": [
+                {
+                    "version": "IAV_IP_V4",
+                    "octets": "8.8.8.8"
+                }
+            ],
+            "netbios_servers": [],
+            "lease_time": {
+                "days": 1,
+                "hours": 0,
+                "minutes": 0,
+                "infinite": false
+            },
+            "ip_range": [
+                {
+                    "ip_start": {
+                        "version": "IAV_IP_V4",
+                        "octets": "192.168.32.50"
+                    },
+                    "ip_end": {
+                        "version": "IAV_IP_V4",
+                        "octets": "192.168.32.150"
+                    }
+                }
+            ],
+            "options": []
+        },
+        {
+            "uri": "/dhcp-server/pools/VLAN-31-b",
+            "pool_name": "VLAN-31-b",
+            "network_ip": null,
+            "network_mask": null,
+            "default_routers": [],
+            "dns_servers": [],
+            "netbios_servers": [],
+            "lease_time": {
+                "days": 0,
+                "hours": 0,
+                "minutes": 0,
+                "infinite": true
+            },
+            "ip_range": [],
+            "options": []
+        }
+    ],
+    "collection_result": {
+        "total_elements_count": 3,
+        "filtered_elements_count": 3
+    }
+}
