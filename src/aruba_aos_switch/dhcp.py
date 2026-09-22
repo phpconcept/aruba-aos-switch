@@ -74,6 +74,26 @@ def server_status(client: AosSwitchClient) -> bool | None:
     return match.group(1).lower() == "yes"
 
 
+def server_enable(client: AosSwitchClient) -> None:
+    """Active le serveur DHCP (`dhcp-server enable`).
+
+    À distinguer de `_dhcp_reconfigure()` : ici, c'est l'action demandée
+    explicitement par l'appelant, pas une réactivation automatique après
+    une modification de pool/réservation.
+    """
+    client.any_cli("dhcp-server enable")
+
+
+def server_disable(client: AosSwitchClient) -> None:
+    """Désactive le serveur DHCP (`dhcp-server disable`).
+
+    Action impactante : coupe la distribution DHCP sur tous les VLANs
+    concernés par ce switch. À l'appelant de s'assurer que l'utilisateur en
+    a bien conscience (confirmation côté UI, par exemple).
+    """
+    client.any_cli("dhcp-server disable")
+
+
 # ----------------------------------------------------------------------
 # Pools DHCP
 # ----------------------------------------------------------------------
