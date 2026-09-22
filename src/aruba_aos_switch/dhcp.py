@@ -33,19 +33,35 @@ logger = logging.getLogger("aruba_aos_switch")
 # État global du serveur DHCP
 # ----------------------------------------------------------------------
 
-_SERVER_STATUS_RE = re.compile(r"DHCP\s+server\s*:?\s*(Enabled|Disabled)", re.IGNORECASE)
+# Sortie réelle de `show dhcp-server` (ArubaOS-Switch, relevée sur switch) :
+#
+#  Configuration and Status - DHCP Server
+#
+#   DHCP Server Enabled       : Yes
+#   DHCPv4 Operational Status : Enabled
+#   Traps Enabled             : Yes
+#   Persistent Lease Database : No
+#   Conflict Logging Enabled  : No
+#   DHCP VLAN Interfaces      : 31,32
+#
+# On s'appuie sur « DHCP Server Enabled » (Yes/No) : c'est le champ qui
+# correspond directement aux commandes `dhcp-server enable`/`disable`
+# utilisées ailleurs dans ce module. « DHCPv4 Operational Status » et
+# « DHCP VLAN Interfaces » sont aussi dans cette sortie mais pas exploités
+# pour l'instant (voir ARCHITECTURE.md du projet aruba-dhcp-mgr, §9.5).
+_SERVER_STATUS_RE = re.compile(r"DHCP Server Enabled\s*:\s*(Yes|No)", re.IGNORECASE)
 
 
 def server_status(client: AosSwitchClient) -> bool | None:
     """
-    Indique si le serveur DHCP est actuellement activé sur le switch.
+    Indique si le serveur DHCP est actuellement activé sur le switch
+    (champ « DHCP Server Enabled » de `show dhcp-server`).
 
     Pas d'endpoint REST structuré connu pour ce statut : repose sur le texte
     de `show dhcp-server` (any_cli), avec la même réserve que
-    binding_list() — la sortie exacte peut varier selon la version de
-    firmware. Non encore validé sur un switch réel : si le motif ne
-    correspond pas à la sortie observée en pratique, on renvoie None
-    (statut indéterminé) plutôt que de risquer un faux Enabled/Disabled.
+    binding_list() sur la sensibilité au firmware. Si le motif ne
+    correspond pas à la sortie observée, on renvoie None (statut
+    indéterminé) plutôt que de risquer un faux Enabled/Disabled.
     """
     output = client.any_cli("show dhcp-server")
     match = _SERVER_STATUS_RE.search(output)
@@ -55,7 +71,7 @@ def server_status(client: AosSwitchClient) -> bool | None:
             "de 'show dhcp-server' (motif non trouvé) — à valider sur ce firmware."
         )
         return None
-    return match.group(1).lower() == "enabled"
+    return match.group(1).lower() == "yes"
 
 
 # ----------------------------------------------------------------------
