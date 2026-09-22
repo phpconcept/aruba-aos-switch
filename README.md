@@ -61,7 +61,7 @@ en CLI au préalable (voir `ARCHITECTURE.md`, point 4).
   renouvellement automatique.
 - `any_cli(cmd)` : exécute une commande CLI, retourne sa sortie texte.
 - `batch_cli(cmds)` : soumet un lot de commandes CLI (voir limitation
-  connue dans `DESIGN.md`).
+  connue dans `ARCHITECTURE.md`).
 - Module `dhcp` : liste/ajout/modification/suppression de pools DHCP,
   liste/ajout/suppression de réservations (bindings) statiques,
   `server_status()` (statut enable/disable du serveur DHCP).

@@ -39,7 +39,7 @@ dans `/var/dev/`.
   (celle-ci n'est pas réutilisée telle quelle, juste comme référence de
   comportement).
 - Documentation (`README.md`, ce fichier) en français, working document
-  pour `DESIGN.md` — même convention que les autres projets.
+  pour `ARCHITECTURE.md` — même convention que les autres projets.
 
 ### Packaging : package pip installable (`pyproject.toml`)
 
