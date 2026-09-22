@@ -30,6 +30,35 @@ logger = logging.getLogger("aruba_aos_switch")
 
 
 # ----------------------------------------------------------------------
+# État global du serveur DHCP
+# ----------------------------------------------------------------------
+
+_SERVER_STATUS_RE = re.compile(r"DHCP\s+server\s*:?\s*(Enabled|Disabled)", re.IGNORECASE)
+
+
+def server_status(client: AosSwitchClient) -> bool | None:
+    """
+    Indique si le serveur DHCP est actuellement activé sur le switch.
+
+    Pas d'endpoint REST structuré connu pour ce statut : repose sur le texte
+    de `show dhcp-server` (any_cli), avec la même réserve que
+    binding_list() — la sortie exacte peut varier selon la version de
+    firmware. Non encore validé sur un switch réel : si le motif ne
+    correspond pas à la sortie observée en pratique, on renvoie None
+    (statut indéterminé) plutôt que de risquer un faux Enabled/Disabled.
+    """
+    output = client.any_cli("show dhcp-server")
+    match = _SERVER_STATUS_RE.search(output)
+    if match is None:
+        logger.warning(
+            "Impossible de déterminer l'état du serveur DHCP depuis la sortie "
+            "de 'show dhcp-server' (motif non trouvé) — à valider sur ce firmware."
+        )
+        return None
+    return match.group(1).lower() == "enabled"
+
+
+# ----------------------------------------------------------------------
 # Pools DHCP
 # ----------------------------------------------------------------------
 
