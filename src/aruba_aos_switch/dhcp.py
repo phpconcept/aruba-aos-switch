@@ -155,9 +155,10 @@ def pool_list(client: AosSwitchClient) -> list[DhcpPool]:
                 dns_servers=[r["octets"] for r in item.get("dns_servers", [])],
                 ip_ranges=ip_ranges,
                 lease=_format_lease(item.get("lease_time")),
-                # Nom de champ REST non confirmé sur switch réel (absent du
-                # jeu de test) — best-effort, à valider (voir ARCHITECTURE.md).
-                domain_name=item.get("domain_name"),
+                # domain_name volontairement pas renseigné ici : ni le REST
+                # ni `show dhcp-server pool <name>` ne l'exposent (confirmé
+                # sur switch réel) — voir pool_domain_name() pour la seule
+                # source fiable (show running-config).
             )
         )
     return pools
@@ -258,6 +259,54 @@ def _set_pool_default_gateways(
         client.any_cli(
             f"dhcp-server pool '{name}' default-router '{','.join(default_gateways)}'"
         )
+
+
+_DOMAIN_NAME_RE = re.compile(r'domain-name\s+"([^"]*)"')
+
+
+def _pool_config_block(running_config: str, name: str) -> str | None:
+    """
+    Extrait le bloc de configuration d'un pool depuis `show running-config`
+    (de la ligne `dhcp-server pool "<name>"` jusqu'au `exit` correspondant),
+    ou None si ce pool n'apparaît pas dans la config.
+    """
+    lines = running_config.splitlines()
+    start = None
+    target = f'dhcp-server pool "{name}"'
+    for i, line in enumerate(lines):
+        if line.strip() == target:
+            start = i
+            break
+    if start is None:
+        return None
+
+    block_lines: list[str] = []
+    for line in lines[start + 1 :]:
+        if line.strip() == "exit":
+            break
+        block_lines.append(line)
+    return "\n".join(block_lines)
+
+
+def pool_domain_name(client: AosSwitchClient, name: str) -> str | None:
+    """
+    Renvoie le nom de domaine DNS configuré pour ce pool (`domain-name`),
+    ou None si non configuré ou pool introuvable.
+
+    Ni l'API REST (`/dhcp-server/pools`) ni `show dhcp-server pool <name>`
+    n'exposent ce champ (confirmé sur switch réel — voir ARCHITECTURE.md du
+    projet `aruba-dhcp-mgr`) : seule la configuration brute
+    (`show running-config`) le montre. Plus coûteux (récupère toute la
+    config du switch) que les autres lectures de ce module — à réserver à
+    un usage ponctuel (fiche d'un pool), pas à un appel en boucle sur
+    `pool_list()`.
+    """
+    output = client.any_cli("show running-config")
+    block = _pool_config_block(output, name)
+    if block is None:
+        return None
+    match = _DOMAIN_NAME_RE.search(block)
+    return match.group(1) if match else None
 
 
 def _set_pool_domain_name(client: AosSwitchClient, name: str, domain_name: str) -> None:
