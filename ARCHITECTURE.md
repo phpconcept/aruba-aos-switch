@@ -1,9 +1,15 @@
-# DESIGN.md — aruba-aos-switch
+# ARCHITECTURE.md — aruba-aos-switch
 
 Ce document consigne le contexte, les choix d'architecture faits (et
 pourquoi), et une liste vivante de points ouverts / idées pour plus tard.
 Écrit au fil de l'eau, à corriger au fur et à mesure que les tests sur le
 switch de labo confirment ou infirment certaines hypothèses.
+
+Cette lib est consommée par [`aruba-dhcp-mgr`](https://github.com/phpconcept/aruba-dhcp-mgr)
+(frontal web de gestion DHCP), dont les tests sur switch réel ont permis de
+valider plusieurs points listés ci-dessous — voir son propre
+`ARCHITECTURE.md` pour le détail des observations côté switch (comportement
+d'écrasement sur nom de pool dupliqué, pools sans réseau, etc.).
 
 ## Contexte
 
@@ -50,7 +56,10 @@ publiée. Build backend : `hatchling` (simple, pas de compilation).
 - Connexion/authentification (login-sessions, cookie, renouvellement auto).
 - `any_cli()` / `batch_cli()` génériques.
 - Module `dhcp` : parité fonctionnelle avec la classe PHP (pools et
-  bindings).
+  bindings), plus `server_status()` (statut enable/disable du serveur DHCP,
+  ajouté après coup pour un besoin de `aruba-dhcp-mgr` — n'existait pas
+  dans la classe PHP d'origine, pas d'endpoint REST structuré connu pour
+  ce statut, parse le texte de `show dhcp-server`).
 
 D'autres domaines (VLANs, interfaces, système...) viendront ensuite, sous
 forme de nouveaux modules suivant le même principe.
@@ -145,25 +154,27 @@ points sont à vérifier en priorité avant de considérer le module DHCP
    publique, qui varie selon les versions de firmware. En attendant,
    `batch_cli()` ne fait que soumettre (pas de valeur de retour
    exploitable) ; pour un résultat par commande, utiliser `any_cli()` en
-   boucle.
-2. **Format exact de `show dhcp-server binding`.** `dhcp._parse_binding_line`
-   reprend telle quelle la regex de la classe PHP. Le format précis
-   (espacement, présence/absence de colonnes selon le type d'entrée,
-   valeur exacte pour une réservation statique sans bail — `Infinite` dans
-   nos tests, à confirmer) n'est pas documenté dans l'API REST : à valider
-   avec une vraie sortie CLI capturée sur le switch de labo, et ajuster les
-   tests unitaires (`tests/test_dhcp.py`) avec un exemple réel si le format
-   diffère.
+   boucle. **Toujours ouvert** — `aruba-dhcp-mgr` n'a pour l'instant utilisé
+   que `any_cli()`/les fonctions `dhcp.*`, jamais `batch_cli()` directement.
+2. ✅ **Format de `show dhcp-server binding` : validé.** `pool_list()` et
+   `binding_list()` fonctionnent correctement sur switch réel (confirmé via
+   `aruba-dhcp-mgr` : lecture, ajout, suppression de pools et réservations
+   opérationnels). Nuance qui reste à surveiller : le cas d'un pool sans
+   `network`/`mask` ni `static-bind` (ex. `testrr` dans les tests
+   Vincent) — actuellement exclu silencieusement de `pool_list()`, voir
+   `aruba-dhcp-mgr`/ARCHITECTURE.md §9.1.
 3. **`session_timeout`.** Fixé à 600s par défaut (valeur reprise de la
    classe PHP) plutôt que lu depuis la configuration réelle du switch
    (`show session-timeout` ou équivalent). À revoir si besoin d'un
-   comportement plus robuste (ex: lire la vraie valeur au login).
-4. **Scheme HTTP vs HTTPS.** La classe PHP utilisait `http://` en dur (avec
-   vérification TLS désactivée par ailleurs, ce qui suggère que HTTPS
-   était possible mais pas utilisé). `AosSwitchClient` utilise `https://`
-   par défaut avec `verify_ssl=False` ; à confirmer que l'API REST du
-   switch de labo répond bien en HTTPS, sinon passer `scheme="http"`
-   explicitement.
+   comportement plus robuste (ex: lire la vraie valeur au login). Toujours
+   ouvert.
+4. ✅ **Scheme HTTP vs HTTPS : validé, HTTPS fonctionne.** Nécessite côté
+   switch un certificat + `web-management ssl` + `rest-interface` activés
+   (pas actifs par défaut) — voir `aruba-dhcp-mgr`/ARCHITECTURE.md §7 pour
+   les commandes CLI exactes. Une fois ça fait, `https://` +
+   `verify_ssl=False` (certificat auto-signé) fonctionne comme prévu ;
+   `scheme="http"` reste disponible si besoin mais pas nécessaire en
+   pratique.
 
 ## Idées / roadmap (non priorisé)
 
@@ -174,5 +185,7 @@ points sont à vérifier en priorité avant de considérer le module DHCP
 - CLI en ligne de commande (`aruba-aos-switch show-system ...`) si l'usage
   s'y prête, une fois la librairie stabilisée.
 - Publication sur GitHub (`phpconcept/aruba-aos-switch`) et éventuellement
-  PyPI, une fois le module DHCP validé sur le switch réel.
+  PyPI — le module DHCP est maintenant validé sur switch réel (via
+  `aruba-dhcp-mgr`), ne manque plus que la création du remote et le push
+  (fait pour `aruba-dhcp-mgr`, pas encore pour ce dépôt).
 - CI GitHub Actions (lint + tests unitaires) au moment de la publication.
