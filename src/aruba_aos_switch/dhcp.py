@@ -99,6 +99,23 @@ def server_disable(client: AosSwitchClient) -> None:
 # ----------------------------------------------------------------------
 
 
+def _format_lease(lease_time: dict | None) -> str:
+    """
+    Convertit le champ REST `lease_time` ({days, hours, minutes, infinite})
+    vers le format CLI "DD:HH:MM" (ou "infinite") — confirmé présent et
+    structuré ainsi dans le jeu de test disponible (tests/fixtures).
+    """
+    if not lease_time:
+        return "infinite"
+    if lease_time.get("infinite"):
+        return "infinite"
+    return (
+        f"{lease_time.get('days', 0)}:"
+        f"{lease_time.get('hours', 0)}:"
+        f"{lease_time.get('minutes', 0)}"
+    )
+
+
 def pool_list(client: AosSwitchClient) -> list[DhcpPool]:
     """
     Liste les pools DHCP configurés (GET /rest/v1/dhcp-server/pools).
@@ -137,6 +154,10 @@ def pool_list(client: AosSwitchClient) -> list[DhcpPool]:
                 ],
                 dns_servers=[r["octets"] for r in item.get("dns_servers", [])],
                 ip_ranges=ip_ranges,
+                lease=_format_lease(item.get("lease_time")),
+                # Nom de champ REST non confirmé sur switch réel (absent du
+                # jeu de test) — best-effort, à valider (voir ARCHITECTURE.md).
+                domain_name=item.get("domain_name"),
             )
         )
     return pools
@@ -150,6 +171,8 @@ def pool_add(
     *,
     dns_servers: list[str] | None = None,
     default_gateways: list[str] | None = None,
+    domain_name: str | None = None,
+    lease: str | None = None,
     server_enable: bool = True,
 ) -> None:
     """Crée un pool DHCP réseau (`dhcp-server pool ... network ...`)."""
@@ -159,6 +182,10 @@ def pool_add(
             _set_pool_dns_servers(client, name, dns_servers)
         if default_gateways is not None:
             _set_pool_default_gateways(client, name, default_gateways)
+        if domain_name is not None:
+            _set_pool_domain_name(client, name, domain_name)
+        if lease is not None:
+            _set_pool_lease(client, name, lease)
 
 
 def pool_edit(
@@ -169,6 +196,8 @@ def pool_edit(
     mask: str | None = None,
     dns_servers: list[str] | None = None,
     default_gateways: list[str] | None = None,
+    domain_name: str | None = None,
+    lease: str | None = None,
     ip_ranges_add: list[IpRange] | None = None,
     ip_ranges_remove: list[IpRange] | None = None,
     server_enable: bool = True,
@@ -189,6 +218,10 @@ def pool_edit(
             _set_pool_dns_servers(client, name, dns_servers)
         if default_gateways is not None:
             _set_pool_default_gateways(client, name, default_gateways)
+        if domain_name is not None:
+            _set_pool_domain_name(client, name, domain_name)
+        if lease is not None:
+            _set_pool_lease(client, name, lease)
         for ip_range in ip_ranges_add or []:
             client.any_cli(
                 f"dhcp-server pool '{name}' range {ip_range.ip_start} {ip_range.ip_end}"
@@ -225,6 +258,22 @@ def _set_pool_default_gateways(
         client.any_cli(
             f"dhcp-server pool '{name}' default-router '{','.join(default_gateways)}'"
         )
+
+
+def _set_pool_domain_name(client: AosSwitchClient, name: str, domain_name: str) -> None:
+    if not domain_name:
+        client.any_cli(f"no dhcp-server pool '{name}' domain-name")
+    else:
+        client.any_cli(f"dhcp-server pool '{name}' domain-name {domain_name}")
+
+
+def _set_pool_lease(client: AosSwitchClient, name: str, lease: str) -> None:
+    """
+    `lease` doit déjà être au format CLI attendu : "DD:HH:MM" ou
+    "infinite" — pas de validation de format ici, à faire côté appelant
+    (voir DhcpPool.lease pour le format renvoyé en lecture).
+    """
+    client.any_cli(f"dhcp-server pool '{name}' lease {lease}")
 
 
 # ----------------------------------------------------------------------

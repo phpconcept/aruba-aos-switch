@@ -23,6 +23,12 @@ class DhcpPool:
     default_gateways: list[str] = field(default_factory=list)
     dns_servers: list[str] = field(default_factory=list)
     ip_ranges: list[IpRange] = field(default_factory=list)
+    # Durée de bail, au format CLI "DD:HH:MM" ou "infinite" (voir
+    # dhcp.pool_list()/dhcp.pool_edit()) — toujours renseigné par le REST.
+    lease: str = "infinite"
+    # Nom de domaine DNS du pool. Champ REST non confirmé sur switch réel
+    # (absent du jeu de test disponible) — voir dhcp.pool_list().
+    domain_name: str | None = None
 
 
 @dataclass
